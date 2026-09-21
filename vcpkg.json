@@ -1,0 +1,8 @@
+{
+  "name": "libcrawler",
+  "version-string": "0.1.0",
+  "description": "C++ crawler library using libcurl-impersonate and Lexbor",
+  "dependencies": [
+    "lexbor"
+  ]
+}
