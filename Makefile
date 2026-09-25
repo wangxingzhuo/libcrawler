@@ -8,26 +8,34 @@ else
 $(error $(CONFIG) is missing; run ./configure.sh first)
 endif
 
-CXX ?= c++
+CC ?= gcc
+CXX ?= g++
 AR ?= ar
-CPPFLAGS += -I$(PROJECT_ROOT)/include -I$(LEXBOR_INCLUDE_DIR)
-CXXFLAGS += -std=c++23 -Wall -Wextra -Wpedantic -pthread -include $(PROJECT_ROOT)/src/stdafx.hpp
+CPPFLAGS += -I$(PROJECT_ROOT)/include -I$(PROJECT_ROOT)/src -I$(LEXBOR_INCLUDE_DIR)/..
+
+CFLAGS =   -std=c2x   $(CPPFLAGS) -Wall -Wextra -Wpedantic -pthread -fPIC
+CXXFLAGS = -std=c++23 $(CPPFLAGS) -Wall -Wextra -Wpedantic -pthread -fPIC
 LDFLAGS += -L$(IMPERSONATE_DIR)
 LDLIBS += $(LEXBOR_LIBRARY) $(IMPERSONATE_LIBRARY) $(PLATFORM_LDLIBS) -pthread
 
-SOURCES := src/libcrawler.cpp src/state.cpp src/http.cpp src/dom.cpp src/memory.cpp
-OBJECTS := $(SOURCES:src/%.cpp=$(BUILD_DIR)/%.o)
+SOURCES := src/client.c src/element.cpp
+OBJECTS := $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(filter %.c,$(SOURCES))) \
+	$(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(filter %.cpp,$(SOURCES)))
 TARGET := $(BUILD_DIR)/libcrawler.$(SHARED_EXT)
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS) $(LEXBOR_LIBRARY) $(IMPERSONATE_LIBRARY)
+$(TARGET): $(OBJECTS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(SHARED_FLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
 
-$(BUILD_DIR)/%.o: src/%.cpp $(CONFIG) src/stdafx.hpp src/internal.hpp include/libcrawler.h
+$(BUILD_DIR)/%.o: src/%.c $(CONFIG) src/stdafx.h include/libcrawler.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
+
+$(BUILD_DIR)/%.o: src/%.cpp $(CONFIG) src/stdafx.h include/libcrawler.h
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -MF $(@:.o=.d) -c $< -o $@
 

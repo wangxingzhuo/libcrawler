@@ -2,32 +2,44 @@
 #define LIBCRAWLER_H
 
 #include <stddef.h>
+#include <stdint.h>
+
+#include <lexbor/dom/interfaces/element.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct crawler_element_t crawler_element_t;
+typedef struct c_string
+{
+    size_t length;
+    char *data;
+} c_string_t;
 
-/* Returns NULL on failure. Check crawler_last_error() on the calling thread. */
-crawler_element_t *fetch(const char *url);
+typedef void (*on_data_fn)(const c_string_t data, void *context);
 
-/* Returns a JSON/JSONP body owned by the caller, or NULL on failure. */
-char *fetch_json(const char *url);
+struct resp_header
+{
+    int16_t status;
+    c_string_t content_type;
+};
 
-/* Returns NULL when there is no match or the selector is invalid. */
-crawler_element_t *query_selector(const crawler_element_t *element, const char *selector);
-crawler_element_t *query_selector_all(const crawler_element_t *element, const char *selector, size_t *count);
+typedef struct response
+{
+	struct resp_header header;
+	on_data_fn on_data;
+	void *context;
+} response_t;
 
-/* Returned strings must be released with crawler_free_string(). */
-char *inner_text(const crawler_element_t *element);
-char *get_attribute(const crawler_element_t *element, const char *name);
+int fetch_get(response_t *response, const char *browser, const char *url);
+lxb_html_document_t * to_document(c_string_t html);
+int select_nodes(lxb_dom_element_t ***dst, lxb_dom_element_t *root, const char *selector);
+c_string_t text_content(lxb_dom_element_t *element);
+c_string_t attribute_value(lxb_dom_element_t *element, const char *name);
 
-/* Returns the latest error for the calling thread, or NULL when there is none. */
-const char *crawler_last_error(void);
-
-void crawler_free_string(char *value);
-void crawler_free(void *value);
+c_string_t * new_cstring(c_string_t *result, const char *str, size_t len);
+void cstring_free(c_string_t *value);
+void destroy_document(lxb_html_document_t *doc);
 
 #ifdef __cplusplus
 }
